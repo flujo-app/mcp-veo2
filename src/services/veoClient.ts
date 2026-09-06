@@ -124,7 +124,11 @@ export class MediaStore {
     try {
       if ((await handle.stat()).size > 65536)
         throw new Error("Invalid metadata");
-      data = JSON.parse(await handle.readFile("utf8"));
+      try {
+        data = JSON.parse(await handle.readFile("utf8"));
+      } catch {
+        throw new Error("Invalid media metadata");
+      }
     } finally {
       await handle.close();
     }
@@ -240,11 +244,16 @@ export class VeoClient {
           "); check model access, quota and billing",
       );
     }
-    return JSON.parse(
-      (
-        await boundedBody(response, this.config.maxMediaBytes * 2, signal)
-      ).toString(),
+    const bytes = await boundedBody(
+      response,
+      this.config.maxMediaBytes * 2,
+      signal,
     );
+    try {
+      return JSON.parse(bytes.toString());
+    } catch {
+      throw new Error("Invalid Google API response");
+    }
   }
   async download(
     rawUrl: string,

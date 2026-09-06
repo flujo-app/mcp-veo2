@@ -238,3 +238,16 @@ test("provider errors never echo provider bodies or keys", async (t) => {
       !error.message.includes(key) && error.message.includes("HTTP 403"),
   );
 });
+
+test("malformed provider JSON cannot leak response fragments through parse errors", async (t) => {
+  const { config, store } = await fixture(t);
+  const provider = new VeoClient(
+    config,
+    store,
+    async () => new Response("malformed secret=" + key),
+  );
+  await assert.rejects(
+    () => provider.generateImage("hello", signal()),
+    (error) => error.message === "Invalid Google API response",
+  );
+});
